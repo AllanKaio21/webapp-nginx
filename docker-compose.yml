@@ -1,0 +1,130 @@
+version: '3'
+
+services: 
+  # app site 01
+  app-site-01:
+    build:
+      context: ./duck-site
+      dockerfile: Dockerfile
+    container_name: app_duck_site_01
+    restart: unless-stopped
+    working_dir: /var/www/site/
+    volumes:
+      - ./duck-site:/var/www/site
+    depends_on:
+      - db
+    networks:
+      - laravel
+    env_file:
+      - ./duck-site/.env
+    command: sh -c "composer install && php artisan migrate && php-fpm"
+
+  # app site 02
+  app-site-02:
+    build:
+      context: ./duck-site
+      dockerfile: Dockerfile
+    container_name: app_duck_site_02
+    restart: unless-stopped
+    working_dir: /var/www/site/
+    volumes:
+      - ./duck-site:/var/www/site
+    depends_on:
+      - db
+    networks:
+      - laravel
+    env_file:
+      - ./duck-site/.env
+    command: sh -c "composer install && php artisan migrate && php-fpm"
+  
+  # app game 01
+  app-game-01:
+    build:
+      context: ./duck-game
+      dockerfile: Dockerfile
+    container_name: app_duck_game_01
+    restart: unless-stopped
+    working_dir: /var/www/game/
+    volumes:
+      - ./duck-game:/var/www/game
+    depends_on:
+      - dbgame
+    networks:
+      - laravel
+    env_file:
+      - ./duck-game/.env
+    command: sh -c "composer install && php artisan migrate && php-fpm"
+
+  # app game 02
+  app-game-02:
+    build:
+      context: ./duck-game
+      dockerfile: Dockerfile
+    container_name: app_duck_game_02
+    restart: unless-stopped
+    working_dir: /var/www/game/
+    volumes:
+      - ./duck-game:/var/www/game
+    depends_on:
+      - dbgame
+    networks:
+      - laravel
+    env_file:
+      - ./duck-game/.env
+    command: sh -c "composer install && php artisan migrate && php-fpm"
+  
+  # nginx service
+  nginx: 
+    build:
+      context: ./
+      dockerfile: docker/nginx.dockerfile
+    container_name: nginx_duck
+    restart: unless-stopped
+    ports: 
+      - "80:80"
+    volumes:
+      - ./duck-site:/var/www/site
+      - ./duck-game:/var/www/game
+      - ./docker/nginx/:/etc/nginx/conf.d/
+    networks:
+      - laravel
+
+  # db mysql game
+  dbgame:
+    image: mysql
+    container_name: db_duck_game
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_PASSWORD: root
+      MYSQL_USER: duckgame
+    volumes:
+      - ./duck-game/.docker/mysql/dbdata:/var/lib/mysql
+    ports:
+      - "3309:3306"
+    networks:
+      - laravel
+    command: "--default-authentication-plugin=mysql_native_password"
+
+  # db mysql site
+  db:
+    image: mysql
+    container_name: db_duck_site
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_PASSWORD: root
+      MYSQL_USER: ducksite
+    volumes:
+      - ./duck-site/.docker/mysql/dbdata:/var/lib/mysql
+    ports:
+      - "3308:3306"
+    networks:
+      - laravel
+    command: "--default-authentication-plugin=mysql_native_password"
+  
+networks:
+  laravel:
+    driver: bridge
